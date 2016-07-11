@@ -1,0 +1,63 @@
+version: '2'
+services:
+  torrent:
+    image: kfei/docktorrent
+    container_name: torrent
+    restart: always
+    networks:
+      - front
+    volumes:
+      - torrent:/rtorrent
+    ports:
+      - "45566:45566"
+    dns: 8.8.8.8
+    tty: true
+    environment:
+      - VIRTUAL_HOST=${TORRENT_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${TORRENT_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - AUTH_OFF=all
+
+  cakebox:
+    image: timonier/cakebox:1.8.6
+    container_name: cakebox
+    restart: always
+    networks:
+      - front
+    volumes:
+      - torrent:/rtorrent
+      - /etc/passwd:/etc/passwd:ro
+    expose:
+      - "80"
+    environment:
+      - VIRTUAL_HOST=${CAKE_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${CAKE_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - CAKEBOX_USER=root
+      - CAKEBOX_ROOT=/rtorrent
+      - RIGHTS_CAN_DELETE=true
+
+  plex:
+    image: linuxserver/plex
+    container_name: plex
+    restart: always
+    network_mode: host
+    volumes:
+      - torrent:/data
+      - plex:/config
+    environment:
+      - VERSION=latest
+      - PUID=0
+      - PGID=0
+
+volumes:
+  plex:
+  torrent:
+  proxy_htpasswd:
+    external:
+      name: 'proxy_htpasswd'
+
+networks:
+  front:
+    external:
+      name: proxy_front
